@@ -2,6 +2,7 @@ pub mod poppler_interface;
 
 #[cfg(test)]
 mod tests {
+    use super::poppler_interface::OutputType;
     use super::poppler_interface::PopperTools;
     use super::poppler_interface::PopplerInterface;
     #[test]
@@ -31,8 +32,9 @@ mod tests {
             r"C:\Users\thula\Downloads\table.pdf",
         ];
         for i in pdfs {
-            let out = tools.convert_to_image(i, vec!["-png"]).unwrap();
+            let out = tools.convert_to_image(i, OutputType::JPEGCMKY, None).unwrap();
             println!("{:?}", out);
+            tools.delete_files(out).unwrap();
         }
         */
     }

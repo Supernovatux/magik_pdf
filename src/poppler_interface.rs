@@ -3,7 +3,6 @@ use futures_util::StreamExt;
 //use rand::Rng;
 use anyhow::{Context, Result};
 use std::error::Error;
-use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::fs;
 use std::fs::create_dir_all;
@@ -18,6 +17,37 @@ use zip_extensions::zip_extract;
 
 const MAGIC_URL: &str =
     "https://github.com/oschwartz10612/poppler-windows/releases/download/v24.02.0-0/Release-24.02.0-0.zip";
+#[derive(Default)]
+pub enum OutputType {
+    PPM,
+    JPG,
+    JPEGCMKY,
+    #[default]
+    PNG,
+    TIFF,
+}
+impl OutputType {
+    fn get_formatter(&self) -> String {
+        match self {
+            OutputType::PPM => "ppm",
+            OutputType::JPG => "jpg",
+            OutputType::JPEGCMKY => "jpg",
+            OutputType::TIFF => "tif",
+            OutputType::PNG => "png",
+        }
+        .to_string()
+    }
+    fn get_arg(&self) -> String {
+        match self {
+            OutputType::PPM => "-q",
+            OutputType::JPG => "-jpeg",
+            OutputType::JPEGCMKY => "-jpegcmyk",
+            OutputType::TIFF => "-tiff",
+            OutputType::PNG => "-png",
+        }
+        .to_string()
+    }
+}
 /// An interface for using poppler
 ///
 /// # Example
@@ -44,12 +74,12 @@ impl PopperTools {
         PopperTools {}
     }
 }
+impl PopplerInterface for PopperTools {}
 impl Default for PopperTools {
     fn default() -> Self {
         Self::new()
     }
 }
-impl PopplerInterface for PopperTools {}
 pub trait PopplerInterface {
     /// Checks if [Popper](https://github.com/oschwartz10612/poppler-windows) pdf handling tool is present. Returns `Ok(PathBuf)` is path popper is present, else returns an `Err`
     fn is_tool_present(&self) -> Result<PathBuf, Box<dyn Error>> {
@@ -72,6 +102,7 @@ pub trait PopplerInterface {
         magic_zip_path.push("popper.zip");
         runtime.block_on(download_files(MAGIC_URL, &magic_zip_path))?;
         zip_extract(&magic_zip_path, &path)?;
+        fs::remove_file(magic_zip_path)?;
         Ok(())
     }
     /// Can delete all the files returned by `convert_to_image`. Returns a `Result`
@@ -89,14 +120,12 @@ pub trait PopplerInterface {
     /// println!("{:?}", out);
     /// tools.delete_files(out).unwrap();
     /// ```
-    fn convert_to_image<I: IntoIterator>(
+    fn convert_to_image(
         &self,
         pdf_path: impl Into<PathBuf> + std::convert::AsRef<std::ffi::OsStr>,
-        args: I,
-    ) -> Result<Vec<impl Into<PathBuf> + Debug>, Box<dyn Error>>
-    where
-        <I as IntoIterator>::Item: AsRef<OsStr>,
-    {
+        out_type: OutputType,
+        args: Option<Vec<&str>>,
+    ) -> Result<Vec<impl Into<PathBuf> + Debug>, Box<dyn Error>> {
         let mut path = Self::is_tool_present(self)?;
         path.push("Library\\bin\\pdftoppm.exe");
         println!("{}", path.is_file());
@@ -116,14 +145,24 @@ pub trait PopplerInterface {
         //     num = rand::thread_rng().gen_range(0..100000);
         //     cache_path.push(format!("{}", num));
         // }
-        Command::new(path.as_path())
-            .arg("-png")
-            .args(args)
+        let mut cmd = Command::new(path.as_path());
+        if let Some(args) = args {
+            cmd.args(args);
+        }
+        let _output = cmd
+            .arg(out_type.get_arg())
             .arg(pdf_path)
             .arg(cache_path.clone())
             .output()?;
+        //println!("{}",output.status);
+        //println!("{}", String::from_utf8(output.stdout)?.trim_end());
+        //println!("{}", String::from_utf8(output.stderr)?.trim_end());
         let mut out_vec = Vec::new();
-        for entry in glob::glob(&format!("{}*.png", cache_path.display()))? {
+        for entry in glob::glob(&format!(
+            "{}*.{}",
+            cache_path.display(),
+            out_type.get_formatter(),
+        ))? {
             match entry {
                 Ok(path) => out_vec.push(path),
                 Err(e) => Err(e)?,

@@ -52,6 +52,7 @@ impl OutputType {
 ///
 /// # Example
 /// ```ignore
+/// use super::poppler_interface::OutputType;
 /// use super::poppler_interface::PopperTools;
 /// use super::poppler_interface::PopplerInterface;
 /// let tools = PopperTools::new();
@@ -59,7 +60,7 @@ impl OutputType {
 ///      tools.download_magik().unwrap();
 ///  }
 ///  let out =
-///      tools.convert_to_image(r"C:\Users\thula\Downloads\sponsorship.pdf", vec!["-png"]).unwrap();
+///      tools.convert_to_image(r"C:\Users\thula\Downloads\sponsorship.pdf",OutputType::PNG, None).unwrap();
 ///  println!("{:?}", out);
 ///  // Out is a vector of png image paths, use as fit
 ///  tools.delete_files(out).unwrap();
@@ -116,7 +117,7 @@ pub trait PopplerInterface {
     /// Note that atleast vec!["-png"] is needed for the generation to work
     /// # Example
     /// ```ignore
-    /// let out =  tools.convert_to_image(r"C:\Users\thula\Downloads\sponsorship.pdf", vec!["-png"]).unwrap();
+    /// let out =  tools.convert_to_image(r"C:\Users\thula\Downloads\sponsorship.pdf",OutputType::PNG,None).unwrap();
     /// println!("{:?}", out);
     /// tools.delete_files(out).unwrap();
     /// ```

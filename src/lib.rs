@@ -32,9 +32,9 @@ mod tests {
             r"C:\Users\thula\Downloads\table.pdf",
         ];
         for i in pdfs {
-            let out = tools.convert_to_image(i, OutputType::JPEGCMKY, None).unwrap();
+            let out = tools.convert_to_image(i, OutputType::JPEGCMKY, Some(vec!["-r","300"])).unwrap();
             println!("{:?}", out);
-            tools.delete_files(out).unwrap();
+            //tools.delete_files(out).unwrap();
         }
         */
     }

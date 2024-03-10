@@ -1,9 +1,11 @@
 use directories::ProjectDirs;
 use futures_util::StreamExt;
-use rand::Rng;
+//use rand::Rng;
+use anyhow::{Context, Result};
 use std::error::Error;
 use std::ffi::OsStr;
 use std::fmt::Debug;
+use std::fs;
 use std::fs::create_dir_all;
 use std::fs::remove_file;
 use std::path::Path;
@@ -13,6 +15,7 @@ use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::runtime::Builder;
 use zip_extensions::zip_extract;
+
 const MAGIC_URL: &str =
     "https://github.com/oschwartz10612/poppler-windows/releases/download/v24.02.0-0/Release-24.02.0-0.zip";
 /// An interface for using poppler
@@ -41,7 +44,7 @@ impl PopperTools {
         PopperTools {}
     }
 }
-impl Default for PopperTools{
+impl Default for PopperTools {
     fn default() -> Self {
         Self::new()
     }
@@ -97,27 +100,28 @@ pub trait PopplerInterface {
         let mut path = Self::is_tool_present(self)?;
         path.push("Library\\bin\\pdftoppm.exe");
         println!("{}", path.is_file());
-        let mut num = rand::thread_rng().gen_range(0..100000);
+        //let mut num = rand::thread_rng().gen_range(0..100000);
         let mut cache_path = get_cache_path()?;
         create_dir_all(cache_path.clone())?;
-        cache_path.push(format!("{}", num));
-        while cache_path.is_dir() {
-            cache_path.pop();
-            num = rand::thread_rng().gen_range(0..100000);
-            cache_path.push(format!("{}", num));
-        }
-        println!("{}", cache_path.display());
-        let output = Command::new(path)
+        cache_path.push(
+            Path::new(&pdf_path)
+                .file_stem()
+                .context("No file name found")?
+                .to_str()
+                .context("Invalid UTF-8 File name")?,
+        );
+        // cache_path.push(format!("{}", num));
+        // while cache_path.is_dir() {
+        //     cache_path.pop();
+        //     num = rand::thread_rng().gen_range(0..100000);
+        //     cache_path.push(format!("{}", num));
+        // }
+        Command::new(path.as_path())
             .arg("-png")
             .args(args)
             .arg(pdf_path)
             .arg(cache_path.clone())
             .output()?;
-        println!(
-            "Stdout {:?} \n Stderr {}",
-            String::from_utf8(output.stdout).unwrap().trim_end(),
-            String::from_utf8(output.stderr).unwrap().trim_end()
-        );
         let mut out_vec = Vec::new();
         for entry in glob::glob(&format!("{}*.png", cache_path.display()))? {
             match entry {
@@ -125,13 +129,31 @@ pub trait PopplerInterface {
                 Err(e) => Err(e)?,
             }
         }
-        Ok(out_vec)
+        let mut final_out = Vec::new();
+        for i in out_vec {
+            let init_path: &Path = i.as_ref();
+            let mut out_path = i.clone();
+            let name = init_path
+                .file_stem()
+                .context("Unreachable")?
+                .to_str()
+                .context("Bad file name")?;
+            let mut iter = name.split('-');
+            let num: i32 = iter.next_back().context("Invalid Filename")?.parse()?;
+            let from_name: String = iter.collect();
+            out_path.set_file_name(format!("{}-{:03}", from_name, num));
+            if let Some(ext) = init_path.extension() {
+                out_path.set_extension(ext);
+            }
+            fs::rename(init_path, out_path.as_path())?;
+            final_out.push(out_path);
+        }
+        Ok(final_out)
     }
 }
 
 fn get_file_path() -> Result<PathBuf, std::io::Error> {
     if let Some(project_dirs) = ProjectDirs::from("com", "pdf", "magik") {
-        println!("{}", project_dirs.data_local_dir().display());
         return Ok(PathBuf::from(project_dirs.data_local_dir()));
     }
     Err(std::io::Error::new(
@@ -141,7 +163,6 @@ fn get_file_path() -> Result<PathBuf, std::io::Error> {
 }
 fn get_cache_path() -> Result<PathBuf, std::io::Error> {
     if let Some(project_dirs) = ProjectDirs::from("com", "pdf", "magik") {
-        println!("{}", project_dirs.cache_dir().display());
         return Ok(PathBuf::from(project_dirs.cache_dir()));
     }
     Err(std::io::Error::new(

@@ -2,17 +2,18 @@ pub mod poppler_interface;
 
 #[cfg(test)]
 mod tests {
+    /*
+    use tokio::runtime::Builder;
+
     use super::poppler_interface::OutputType;
     use super::poppler_interface::PopperTools;
     use super::poppler_interface::PopplerInterface;
-    #[test]
-    fn it_works() {
+    async fn it_works() {
         assert!(true);
         let tools = PopperTools::new();
         if !tools.is_tool_present().unwrap().is_dir() {
             tools.download_magik().unwrap();
         }
-        /*
         let pdfs = vec![
             r"C:\Users\thula\Downloads\pdf24_images_merged.pdf",
             r"C:\Users\thula\Downloads\bank-cash-flow-statement-template.pdf",
@@ -36,6 +37,17 @@ mod tests {
             println!("{:?}", out);
             //tools.delete_files(out).unwrap();
         }
-        */
     }
+    #[test]
+    fn async2() {
+    let runtime = Builder::new_multi_thread()
+        .worker_threads(4)
+        .thread_name("Popper Download")
+        .thread_stack_size(3 * 1024 * 1024)
+        .enable_time()
+        .enable_io()
+        .build().unwrap();
+    let _ =runtime.block_on(it_works());
+    }
+     */
 }

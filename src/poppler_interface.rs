@@ -1,6 +1,7 @@
 use directories::ProjectDirs;
 use futures_util::StreamExt;
 //use rand::Rng;
+use std::thread;
 use anyhow::{Context, Result};
 use std::error::Error;
 use std::fmt::Debug;
@@ -90,7 +91,9 @@ pub trait PopplerInterface {
         Ok(path)
     }
     /// Downloads and extraction Popper to app data dir. Returns `Ok(())` if successful
-    fn download_magik(&self) -> Result<(), Box<dyn Error>> {
+    /// invalid Zip archive: Invalid zip header if no internet is found
+    fn download_magik(&self) -> Result<(), anyhow::Error> {
+        thread::spawn(|| {
         let path = get_file_path()?;
         let runtime = Builder::new_multi_thread()
             .worker_threads(4)
@@ -101,10 +104,11 @@ pub trait PopplerInterface {
             .build()?;
         let mut magic_zip_path = path.clone();
         magic_zip_path.push("popper.zip");
-        runtime.block_on(download_files(MAGIC_URL, &magic_zip_path))?;
+        let _ =runtime.block_on(download_files(MAGIC_URL, &magic_zip_path));
         zip_extract(&magic_zip_path, &path)?;
         fs::remove_file(magic_zip_path)?;
-        Ok(())
+        Ok::<(),anyhow::Error>(())
+        }).join().expect("Error").context("Error")
     }
     /// Can delete all the files returned by `convert_to_image`. Returns a `Result`
     fn delete_files(&self, files: Vec<impl Into<PathBuf>>) -> Result<(), Box<dyn Error>> {

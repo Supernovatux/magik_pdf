@@ -194,6 +194,57 @@ pub trait PopplerInterface {
         }
         Ok(final_out)
     }
+    fn convert_to_image_single_page(
+        &self,
+        pdf_path: impl Into<PathBuf> + std::convert::AsRef<std::ffi::OsStr>,
+        out_type: OutputType,
+        args: Option<Vec<&str>>,
+    ) -> Result<Vec<impl Into<PathBuf> + Debug>, Box<dyn Error>> {
+        let mut path = Self::is_tool_present(self)?;
+        path.push("Library\\bin\\pdftoppm.exe");
+        println!("{}", path.is_file());
+        //let mut num = rand::thread_rng().gen_range(0..100000);
+        let mut cache_path = get_cache_path()?;
+        create_dir_all(cache_path.clone())?;
+        cache_path.push(
+            Path::new(&pdf_path)
+                .file_stem()
+                .context("No file name found")?
+                .to_str()
+                .context("Invalid UTF-8 File name")?,
+        );
+        // cache_path.push(format!("{}", num));
+        // while cache_path.is_dir() {
+        //     cache_path.pop();
+        //     num = rand::thread_rng().gen_range(0..100000);
+        //     cache_path.push(format!("{}", num));
+        // }
+        let mut cmd = Command::new(path.as_path());
+        if let Some(args) = args {
+            cmd.args(args);
+        }
+        let _output = cmd
+            .arg(out_type.get_arg())
+            .arg("-singlefile")
+            .arg(pdf_path)
+            .arg(cache_path.clone())
+            .output()?;
+        //println!("{}",output.status);
+        //println!("{}", String::from_utf8(output.stdout)?.trim_end());
+        //println!("{}", String::from_utf8(output.stderr)?.trim_end());
+        let mut out_vec = Vec::new();
+        for entry in glob::glob(&format!(
+            "{}*.{}",
+            cache_path.display(),
+            out_type.get_formatter(),
+        ))? {
+            match entry {
+                Ok(path) => out_vec.push(path),
+                Err(e) => Err(e)?,
+            }
+        }
+        Ok(out_vec)
+    }
 }
 
 fn get_file_path() -> Result<PathBuf, std::io::Error> {

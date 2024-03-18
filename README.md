@@ -11,6 +11,8 @@ if !tools.is_tool_present().unwrap().is_dir() {
 }
 let out =
       tools.convert_to_image(r"C:\Users\thula\Downloads\sponsorship.pdf",OutputType::PNG,Some(vec!["-r","300"])).unwrap();
+// For single page
+// Use tools.convert_to_image_single_page(i, OutputType::JPEGCMKY, Some(vec!["-r","300"])).unwrap(); 
 println!("{:?}", out);
 // Out is a vector of png image paths, use as fit
 tools.delete_files(out).unwrap();
@@ -24,7 +26,6 @@ All available additional args
   -l <int>                                 : last page to print
   -o                                       : print only odd pages
   -e                                       : print only even pages
-  -singlefile                              : write only the first page and do not add digits
   -scale-dimension-before-rotation         : for rotated pdf, resize dimensions before the rotation
   -r <fp>                                  : resolution, in DPI (default is 150)
   -rx <fp>                                 : X resolution, in DPI (default is 150)

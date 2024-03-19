@@ -1,7 +1,6 @@
 use directories::ProjectDirs;
 use futures_util::StreamExt;
 //use rand::Rng;
-use std::thread;
 use anyhow::{Context, Result};
 use std::error::Error;
 use std::fmt::Debug;
@@ -11,6 +10,7 @@ use std::fs::remove_file;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+use std::thread;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::runtime::Builder;
@@ -94,21 +94,24 @@ pub trait PopplerInterface {
     /// invalid Zip archive: Invalid zip header if no internet is found
     fn download_magik(&self) -> Result<(), anyhow::Error> {
         thread::spawn(|| {
-        let path = get_file_path()?;
-        let runtime = Builder::new_multi_thread()
-            .worker_threads(4)
-            .thread_name("Popper Download")
-            .thread_stack_size(3 * 1024 * 1024)
-            .enable_time()
-            .enable_io()
-            .build()?;
-        let mut magic_zip_path = path.clone();
-        magic_zip_path.push("popper.zip");
-        let _ =runtime.block_on(download_files(MAGIC_URL, &magic_zip_path));
-        zip_extract(&magic_zip_path, &path)?;
-        fs::remove_file(magic_zip_path)?;
-        Ok::<(),anyhow::Error>(())
-        }).join().expect("Error").context("Error")
+            let path = get_file_path()?;
+            let runtime = Builder::new_multi_thread()
+                .worker_threads(4)
+                .thread_name("Popper Download")
+                .thread_stack_size(3 * 1024 * 1024)
+                .enable_time()
+                .enable_io()
+                .build()?;
+            let mut magic_zip_path = path.clone();
+            magic_zip_path.push("popper.zip");
+            let _ = runtime.block_on(download_files(MAGIC_URL, &magic_zip_path));
+            zip_extract(&magic_zip_path, &path)?;
+            fs::remove_file(magic_zip_path)?;
+            Ok::<(), anyhow::Error>(())
+        })
+        .join()
+        .expect("Error")
+        .context("Error")
     }
     /// Can delete all the files returned by `convert_to_image`. Returns a `Result`
     fn delete_files(&self, files: Vec<impl Into<PathBuf>>) -> Result<(), Box<dyn Error>> {
@@ -198,12 +201,12 @@ pub trait PopplerInterface {
         &self,
         pdf_path: impl Into<PathBuf> + std::convert::AsRef<std::ffi::OsStr>,
         out_type: OutputType,
+        page_num:usize,
         args: Option<Vec<&str>>,
     ) -> Result<Vec<impl Into<PathBuf> + Debug>, Box<dyn Error>> {
         let mut path = Self::is_tool_present(self)?;
         path.push("Library\\bin\\pdftoppm.exe");
         println!("{}", path.is_file());
-        //let mut num = rand::thread_rng().gen_range(0..100000);
         let mut cache_path = get_cache_path()?;
         create_dir_all(cache_path.clone())?;
         cache_path.push(
@@ -211,7 +214,7 @@ pub trait PopplerInterface {
                 .file_stem()
                 .context("No file name found")?
                 .to_str()
-                .context("Invalid UTF-8 File name")?,
+                .context("Invalid UTF-8 File name")?.to_owned() + &format!("_{}",page_num),
         );
         let mut cmd = Command::new(path.as_path());
         if let Some(args) = args {
@@ -220,9 +223,14 @@ pub trait PopplerInterface {
         let _output = cmd
             .arg(out_type.get_arg())
             .arg("-singlefile")
+            .arg("-f")
+            .arg(format!("{}",page_num))
             .arg(pdf_path)
             .arg(cache_path.clone())
             .output()?;
+        //println!("{}",output.status);
+        //println!("{}", String::from_utf8(output.stdout)?.trim_end());
+        //println!("{}", String::from_utf8(output.stderr)?.trim_end());
         let mut out_vec = Vec::new();
         for entry in glob::glob(&format!(
             "{}*.{}",

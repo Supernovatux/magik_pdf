@@ -12,7 +12,7 @@ if !tools.is_tool_present().unwrap().is_dir() {
 let out =
       tools.convert_to_image(r"C:\Users\thula\Downloads\sponsorship.pdf",OutputType::PNG,Some(vec!["-r","300"])).unwrap();
 // For single page
-// Use tools.convert_to_image_single_page(i, OutputType::JPEGCMKY, Some(vec!["-r","300"])).unwrap(); 
+// Use tools.convert_to_image_single_page(i, OutputType::JPEGCMKY,<Page Number> ,Some(vec!["-r","300"])).unwrap(); 
 println!("{:?}", out);
 // Out is a vector of png image paths, use as fit
 tools.delete_files(out).unwrap();
@@ -22,7 +22,7 @@ tools.delete_files(out).unwrap();
 All available additional args
 
 ```
-  -f <int>                                 : first page to print
+  -f <int>                                 : first page to print. Dont use it with convert_to_image_single_page
   -l <int>                                 : last page to print
   -o                                       : print only odd pages
   -e                                       : print only even pages

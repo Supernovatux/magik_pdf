@@ -2,7 +2,7 @@ pub mod poppler_interface;
 
 #[cfg(test)]
 mod tests {
-    /*
+    /* 
     use tokio::runtime::Builder;
 
     use super::poppler_interface::OutputType;
@@ -33,7 +33,7 @@ mod tests {
             r"C:\Users\thula\Downloads\table.pdf",
         ];
         for i in pdfs {
-            let out = tools.convert_to_image_single_page(i, OutputType::JPEGCMKY, Some(vec!["-r","300"])).unwrap();
+            let out = tools.convert_to_image_single_page(i, OutputType::JPEGCMKY,2, Some(vec!["-r","300"])).unwrap();
             println!("{:?}", out);
             //tools.delete_files(out).unwrap();
         }
@@ -48,6 +48,7 @@ mod tests {
         .enable_io()
         .build().unwrap();
     let _ =runtime.block_on(it_works());
+    panic!()
     }
     */
 }

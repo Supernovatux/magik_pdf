@@ -201,7 +201,7 @@ pub trait PopplerInterface {
         &self,
         pdf_path: impl Into<PathBuf> + std::convert::AsRef<std::ffi::OsStr>,
         out_type: OutputType,
-        page_num:usize,
+        page_num: usize,
         args: Option<Vec<&str>>,
     ) -> Result<Vec<impl Into<PathBuf> + Debug>, Box<dyn Error>> {
         let mut path = Self::is_tool_present(self)?;
@@ -214,7 +214,9 @@ pub trait PopplerInterface {
                 .file_stem()
                 .context("No file name found")?
                 .to_str()
-                .context("Invalid UTF-8 File name")?.to_owned() + &format!("_{}",page_num),
+                .context("Invalid UTF-8 File name")?
+                .to_owned()
+                + &format!("_{}", page_num),
         );
         let mut cmd = Command::new(path.as_path());
         if let Some(args) = args {
@@ -224,7 +226,7 @@ pub trait PopplerInterface {
             .arg(out_type.get_arg())
             .arg("-singlefile")
             .arg("-f")
-            .arg(format!("{}",page_num))
+            .arg(format!("{}", page_num))
             .arg(pdf_path)
             .arg(cache_path.clone())
             .output()?;

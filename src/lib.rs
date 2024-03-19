@@ -2,7 +2,7 @@ pub mod poppler_interface;
 
 #[cfg(test)]
 mod tests {
-    /* 
+    /*
     use tokio::runtime::Builder;
 
     use super::poppler_interface::OutputType;
